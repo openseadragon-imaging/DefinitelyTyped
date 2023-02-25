@@ -626,15 +626,15 @@ declare namespace OpenSeadragon {
         scrollHandler?: EventHandler<MouseTrackerEvent> | undefined;
         clickHandler?: EventHandler<MouseTrackerEvent> | undefined;
         dblClickHandler?: EventHandler<MouseTrackerEvent> | undefined;
-        dragHandler?: EventHandler<MouseTrackerEvent> | undefined;
-        dragEndHandler?: EventHandler<MouseTrackerEvent> | undefined;
+        dragHandler?: EventHandler<DragMouseTrackerEvent> | undefined;
+        dragEndHandler?: EventHandler<DragEndMouseTrackerEvent> | undefined;
         pinchHandler?: EventHandler<MouseTrackerEvent> | undefined;
         keyDownHandler?: EventHandler<MouseTrackerEvent> | undefined;
         keyUpHandler?: EventHandler<MouseTrackerEvent> | undefined;
         keyHandler?: EventHandler<MouseTrackerEvent> | undefined;
         focusHandler?: EventHandler<MouseTrackerEvent> | undefined;
         blurHandler?: EventHandler<MouseTrackerEvent> | undefined;
-        userData?: object | undefined;
+        userData: unknown;
     }
 
     class MouseTracker {
@@ -643,6 +643,7 @@ declare namespace OpenSeadragon {
         dblClickTimeThreshold: number;
         dblClickDistThreshold: number;
         element: Element;
+        userData: unknown;
 
         constructor(options: MouseTrackerOptions);
 
@@ -651,8 +652,8 @@ declare namespace OpenSeadragon {
         contextMenuHandler: EventHandler<ContextMenuMouseTrackerEvent>;
         dblClickHandler: EventHandler<MouseTrackerEvent>;
         destroy(): void;
-        dragEndHandler: EventHandler<MouseTrackerEvent>;
-        dragHandler: EventHandler<MouseTrackerEvent>;
+        dragEndHandler: EventHandler<DragEndMouseTrackerEvent>;
+        dragHandler: EventHandler<DragMouseTrackerEvent>;
         enterHandler: EventHandler<MouseTrackerEvent>;
         /**
          * @deprecated use leaveHandler instead
@@ -768,24 +769,43 @@ declare namespace OpenSeadragon {
 
     type OnDrawCallback = (position: Point, size: Point, element: HTMLElement) => void;
 
-    interface OverlayOptions {
+    interface OverlayBaseOptions {
+        placement?: Placement;
+        onDraw?: OnDrawCallback;
+        checkResize?: boolean;
+        width?: number;
+        height?: number;
+        rotationMode?: OverlayRotationMode;
+    }
+
+    interface OverlayOptions extends OverlayBaseOptions {
         element: HTMLElement;
         location: Point | Rect;
-        placement?: Placement | undefined;
-        onDraw?: OnDrawCallback | undefined;
-        checkResize?: boolean | undefined;
-        width?: number | undefined;
-        height?: number | undefined;
-        rotationMode?: OverlayRotationMode | undefined;
+    }
+
+    interface OverlayUpdateOptions extends OverlayBaseOptions {
+        location?: Point | Rect;
     }
 
     class Overlay {
+        checkResize: boolean;
+        element: HTMLElement;
+        height: number | null;
+        location: Point;
+        onDraw?: OnDrawCallback;
+        placement: Placement;
+        rotationMode: OverlayRotationMode;
+        width: number | null;
+
         constructor(options: OverlayOptions);
+        constructor(element: HTMLElement, location: Point | Rect, placement?: Placement);
+
         adjust(position: Point, size: Point): void;
         destroy(): void;
-        drawHTML(container: HTMLElement): void;
+        drawHTML(container: HTMLElement, viewport: Viewport): void;
         getBounds(viewport: Viewport): Rect;
-        update(location: Point | Rect, placement: Placement): void;
+        update(options: OverlayUpdateOptions): void;
+        update(location?: Point | Rect, placement?: Placement): void;
     }
 
     class Point {
@@ -1128,6 +1148,7 @@ declare namespace OpenSeadragon {
         element: HTMLElement;
         initialPage: number;
         navigator: Navigator;
+        overlaysContainer: HTMLElement;
         viewport: Viewport;
         world: World;
         referenceStrip: ReferenceStrip;
@@ -1748,6 +1769,17 @@ declare namespace OpenSeadragon {
          * @deprecated Use `pointerType` and/or `originalEvent` instead
          */
         isTouchEvent: boolean;
+    }
+
+    interface DragEndMouseTrackerEvent extends PointerMouseTrackerEvent {
+        speed: number;
+        direction: number;
+    }
+
+    interface DragMouseTrackerEvent extends PointerMouseTrackerEvent {
+        delta:  Point;
+        speed: number;
+        direction: number;
     }
 
     interface KeyMouseTrackerEvent extends MouseTrackerEvent<KeyboardEvent> {
